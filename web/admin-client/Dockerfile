@@ -14,22 +14,25 @@ RUN yarn build
 
 # ─── Stage 2: Nginx 静态服务器 ────────────────────────────────
 FROM nginx:1.23.3-alpine
-WORKDIR /app
 
-# 1) 移除默认配置，准备自定义
-RUN rm /etc/nginx/conf.d/default.conf \
-    && rm /etc/nginx/nginx.conf \
+WORKDIR /web
+COPY . .
+
+# 清理默认配置并创建日志目录
+RUN rm -f /etc/nginx/conf.d/default.conf \
+    && rm -f /etc/nginx/nginx.conf \
     && mkdir -p /etc/nginx/logs \
     && touch /etc/nginx/logs/error.log
 
-# 2) 拷贝你自己写好的 nginx.conf
-COPY nginx.conf /etc/nginx/
+# 把主机的 nginx.conf 文件和 admin 静态文件照旧复制
+COPY ./nginx.conf /etc/nginx/
+COPY ./admin /usr/share/nginx/html/admin
 
-# 3) 将打包产物（默认 dist 目录）复制到 Nginx 下运行
-COPY --from=builder /app/dist /usr/share/nginx/html/admin
+# 简单的健康检查，保证 Nginx 正常响应
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
+  CMD wget --quiet --tries=1 --spider http://localhost:9030/admin || exit 1
 
-# 4) 暴露 9030 端口
 EXPOSE 9030
 
-# 5) 前台启动 Nginx
 CMD ["nginx", "-g", "daemon off;"]
+
