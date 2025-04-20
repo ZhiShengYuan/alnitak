@@ -1,7 +1,20 @@
+# ─── Stage 1: Build Vue App ───────────────────────────────────
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# 1) 先复制 package 文件，加速依赖安装缓存
+COPY package.json yarn.lock ./
+
+# 2) 安装依赖
+RUN yarn install --frozen-lockfile
+
+# 3) 复制源码并打包
+COPY . .
+RUN yarn build
+
 FROM nginx:1.23.3-alpine
 
 WORKDIR /web
-COPY . .
 
 # 移除nginx容器的default.conf文件、nginx配置文件
 RUN rm /etc/nginx/conf.d/default.conf \
